@@ -1,4 +1,5 @@
-"""Step 3: label a site. Gemini when GEMINI_API_KEY is set, otherwise (or on failure) simple rules."""
+"""Step 3: label a site with an LLM. Tries every LLM that has a key in .env, in order:
+Gemini -> Claude -> OpenAI. If none has a key, or all of them fail, simple rules decide."""
 import json
 import logging
 import os
@@ -23,6 +24,8 @@ Look at the web page below and answer in JSON with exactly these fields:
   never invent one. Empty string if there is none.
 - "reason": one short sentence explaining the decision.
 
+Answer with the JSON object only, no other text.
+
 URL: {url}
 Title: {title}
 Emails found on the page: {emails}
@@ -32,30 +35,8 @@ Page text (truncated):
 """
 
 
-def llm_available():
-    return bool(os.getenv("GEMINI_API_KEY"))
-
-
-def classify(url, page, brands):
-    # Without the page text the LLM has nothing to read, so rules decide.
-    if not llm_available() or page is None:
-        return rules.classify(url, page, brands)
-    try:
-        return with_retries(lambda: ask_gemini(url, page), attempts=3, first_pause=10)
-    except Exception as error:
-        log.warning("LLM failed for %s (%s), falling back to rules", url, error)
-        return rules.classify(url, page, brands)
-
-
-def ask_gemini(url, page):
+def ask_gemini(prompt):
     model = os.getenv("GEMINI_MODEL") or "gemini-flash-lite-latest"
-    prompt = PROMPT.format(
-        url=url,
-        title=page["title"],
-        emails=", ".join(page["emails"]) or "none",
-        contact_links=", ".join(page["contact_links"]) or "none",
-        text=page["text"],
-    )
     response = requests.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
         headers={"x-goog-api-key": os.getenv("GEMINI_API_KEY")},
@@ -66,7 +47,73 @@ def ask_gemini(url, page):
         timeout=60,
     )
     response.raise_for_status()
-    answer = json.loads(response.json()["candidates"][0]["content"]["parts"][0]["text"])
+    return response.json()["candidates"][0]["content"]["parts"][0]["text"], model
+
+
+def ask_claude(prompt):
+    model = os.getenv("CLAUDE_MODEL") or "claude-haiku-5-5"
+    response = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={"x-api-key": os.getenv("ANTHROPIC_API_KEY"), "anthropic-version": "2023-06-01"},
+        json={"model": model, "max_tokens": 1000, "messages": [{"role": "user", "content": prompt}]},
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()["content"][0]["text"], model
+
+
+def ask_openai(prompt):
+    model = os.getenv("OPENAI_MODEL") or "gpt-5-mini"
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={"Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}"},
+        json={"model": model, "messages": [{"role": "user", "content": prompt}],
+              "response_format": {"type": "json_object"}},
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"], model
+
+
+# (name, key in .env, function) - in the order they are tried
+LLMS = [
+    ("gemini", "GEMINI_API_KEY", ask_gemini),
+    ("claude", "ANTHROPIC_API_KEY", ask_claude),
+    ("openai", "OPENAI_API_KEY", ask_openai),
+]
+
+
+def available_llms():
+    return [(name, ask) for name, key, ask in LLMS if os.getenv(key)]
+
+
+def llm_available():
+    return bool(available_llms())
+
+
+def classify(url, page, brands):
+    # Without the page text the LLM has nothing to read, so rules decide.
+    if page is None:
+        return rules.classify(url, page, brands)
+    prompt = PROMPT.format(
+        url=url,
+        title=page["title"],
+        emails=", ".join(page["emails"]) or "none",
+        contact_links=", ".join(page["contact_links"]) or "none",
+        text=page["text"],
+    )
+    for name, ask in available_llms():
+        try:
+            text, model = with_retries(lambda: ask(prompt), attempts=3, first_pause=10)
+            return to_label(text, f"{name} ({model})")
+        except Exception as error:
+            log.warning("%s failed for %s (%s), trying the next option", name, url, error)
+    return rules.classify(url, page, brands)
+
+
+def to_label(text, method):
+    """Turn the LLM's JSON answer into our label."""
+    answer = json.loads(text[text.find("{"):text.rfind("}") + 1])  # Claude may wrap JSON in ```json ... ```
 
     # The LLM sometimes repeats a brand in different spellings ("Jackpot City" / "Jackpot City Casino").
     brands = {}
@@ -79,5 +126,5 @@ def ask_gemini(url, page):
         "brands": list(brands.values()),
         "contact": answer.get("contact", ""),
         "reason": answer.get("reason", ""),
-        "method": f"gemini ({model})",
+        "method": method,
     }

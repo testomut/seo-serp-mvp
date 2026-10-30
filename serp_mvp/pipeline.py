@@ -40,7 +40,7 @@ def run():
 
     # Step 3: label URLs we haven't seen yet
     urls = storage.urls_to_check(db, today, llm)
-    log.info("%d new URLs to label (%s)", len(urls), "Gemini" if llm else "rules, no GEMINI_API_KEY")
+    log.info("%d new URLs to label (%s)", len(urls), " -> ".join(name for name, _ in classify.available_llms()) or "rules, no LLM key")
     for number, url in enumerate(urls, start=1):
         page = fetch.get_page(url)
         label = classify.classify(url, page, brands)

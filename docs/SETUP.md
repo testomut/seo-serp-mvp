@@ -19,7 +19,7 @@ python main.py
 | Что | Сервис | Переменная |
 |---|---|---|
 | Выдача Google | [SearchApi.io](https://www.searchapi.io) или [SerpApi](https://serpapi.com) (достаточно одного) | `SEARCHAPI_KEY` / `SERPAPI_KEY` |
-| Разметка ИИ | [Google AI Studio](https://aistudio.google.com/apikey) (Gemini) | `GEMINI_API_KEY` |
+| Разметка ИИ | [Google AI Studio](https://aistudio.google.com/apikey) (Gemini), [Anthropic](https://console.anthropic.com) (Claude) или [OpenAI](https://platform.openai.com/api-keys) - любой один или несколько | `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` |
 
 ## Бонус (по желанию)
 
