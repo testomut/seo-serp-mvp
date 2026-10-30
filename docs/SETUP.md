@@ -1,56 +1,52 @@
-# Подключение сервисов
+# Запуск у себя
 
-Все шаги необязательные и независимые. Ключи вписываются в `.env` (локально), в GitHub Secrets (ежедневный
-запуск) и в Render (бот).
+## 1. Без ключей
 
-## 1. Выдача Google и Gemini
+```bash
+git clone https://github.com/testomut/seo-serp-mvp.git && cd seo-serp-mvp
+python -m venv .venv && .venv\Scripts\activate      # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python main.py
+```
 
-- **SearchApi:** зарегистрироваться на searchapi.io → Dashboard → API Key → `SEARCHAPI_KEY`
+Работает сразу: демо-выдача, разметка правилами, результат в `results.xlsx`.
+
+## 2. Реальные данные
+
+Вписать в `.env` два ключа (бесплатно, без карты) и снова запустить `python main.py`:
+
+- **SearchApi:** searchapi.io → Dashboard → API Key → `SEARCHAPI_KEY`
   (или SerpApi: serpapi.com → Dashboard → «Your Private API Key» → `SERPAPI_KEY`; достаточно одного).
 - **Gemini:** aistudio.google.com/apikey → «Create API key» → `GEMINI_API_KEY`.
 
-## 2. Google Sheets
+Этого достаточно: выдача Google по ключам из `keywords.csv`, разметка ИИ, история в `data/serp.db`.
 
-Программа пишет в таблицу от имени «сервисного аккаунта» - робота Google со своим email.
+## Бонус: по желанию, каждый пункт независим
 
-1. console.cloud.google.com → создать проект (карта не нужна).
-2. «APIs & Services» → «Enable APIs» → включить **Google Sheets API**.
-3. «IAM & Admin» → «Service Accounts» → «Create service account» (имя любое).
-4. Открыть созданный аккаунт → «Keys» → «Add key» → «JSON». Скачается файл, положить его в папку проекта
-   как `google-credentials.json` (в git не попадёт).
-5. Создать пустую Google-таблицу → «Share» → вставить email сервисного аккаунта (вида `...@...iam.gserviceaccount.com`)
-   с правом «Editor».
-6. В `.env`: `GOOGLE_SHEET_ID` = часть адреса таблицы между `/d/` и `/edit`,
-   `GOOGLE_CREDENTIALS_FILE=google-credentials.json`.
+### Google Sheets - результат в таблице вместо Excel
 
-При первом запуске вкладка Keywords заполнится из `keywords.csv`, дальше фразы правятся в таблице.
+1. console.cloud.google.com → новый проект → «Enable APIs» → **Google Sheets API**.
+2. «IAM & Admin» → «Service Accounts» → создать → «Keys» → «Add key» → «JSON».
+   Файл положить в папку проекта как `google-credentials.json` (в git не попадёт).
+3. Создать пустую Google-таблицу → «Share» → email сервисного аккаунта (`...@...iam.gserviceaccount.com`), «Editor».
+4. В `.env`: `GOOGLE_SHEET_ID` (часть адреса между `/d/` и `/edit`), `GOOGLE_CREDENTIALS_FILE=google-credentials.json`.
 
-## 3. Telegram-уведомления
+Вкладка Keywords заполнится из `keywords.csv`, дальше фразы правятся в таблице.
 
-1. В Telegram написать @BotFather → `/newbot` → получить токен → `TELEGRAM_BOT_TOKEN`.
-2. Написать своему боту любое сообщение, открыть `https://api.telegram.org/bot<токен>/getUpdates`,
-   найти `"chat":{"id":...}` → `TELEGRAM_CHAT_ID`. Несколько чатов - через запятую.
-   Бот отвечает только этим чатам.
+### GitHub Actions - прогон сам каждый день
 
-**Slack (по желанию):** api.slack.com/apps → Create App → Incoming Webhooks → включить → «Add New Webhook»
-→ выбрать канал → ссылку в `SLACK_WEBHOOK_URL`.
+1. Форкнуть репозиторий (или залить свой).
+2. Settings → Secrets and variables → Actions → добавить те же ключи, что в `.env`.
+   Для Sheets вместо файла - секрет `GOOGLE_CREDENTIALS_JSON` с содержимым `google-credentials.json`.
+3. Actions → daily → Run workflow для проверки. Дальше запуск в 07:00 UTC (время - в `daily.yml`).
 
-## 4. Ежедневный запуск (GitHub Actions)
+### Telegram и Slack - сводка после прогона и бот
 
-1. Залить проект в репозиторий на GitHub.
-2. Settings → Secrets and variables → Actions → «New repository secret» для каждого ключа:
-   `SEARCHAPI_KEY`, `GEMINI_API_KEY`, `GOOGLE_SHEET_ID`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
-   `SLACK_WEBHOOK_URL` и `GOOGLE_CREDENTIALS_JSON` (всё содержимое файла `google-credentials.json`).
-3. Проверить: Actions → daily → Run workflow. После прогона в репозитории появится коммит «Daily run ...».
-
-## 5. Бот с командами (Render)
-
-1. Токен для запуска прогона: GitHub → Settings → Developer settings → Fine-grained tokens → доступ только к
-   этому репозиторию, Permissions: **Actions: Read and write**.
-2. render.com → New → Blueprint → выбрать репозиторий (Render прочитает `render.yaml`).
-3. Вписать значения: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GITHUB_REPO` (`логин/репозиторий`),
-   `GITHUB_TOKEN`, `GOOGLE_SHEET_ID`.
-4. В сервисе → Environment → Secret Files → добавить файл `google-credentials.json` с содержимым ключа.
-5. После деплоя бот сам регистрирует адрес в Telegram. Написать ему `/status`.
-
-**Локально без Render:** `python bot.py` (бот работает, пока открыто окно).
+- **Сводка:** @BotFather → `/newbot` → `TELEGRAM_BOT_TOKEN`. Написать боту, открыть
+  `https://api.telegram.org/bot<токен>/getUpdates` → `"chat":{"id":...}` → `TELEGRAM_CHAT_ID`.
+- **Бот с командами** (`/run`, `/status`, `/new`, ...): локально `python bot.py`, или бесплатно на Render:
+  render.com → New → Blueprint → репозиторий, вписать переменные из `render.yaml`, добавить Secret File
+  `google-credentials.json`. Для `/run` нужен `GITHUB_TOKEN`: GitHub → Developer settings → Fine-grained token,
+  только этот репозиторий, **Actions: Read and write**.
+- **Slack** (только сводка): api.slack.com/apps → Incoming Webhooks → ссылку в `SLACK_WEBHOOK_URL`.

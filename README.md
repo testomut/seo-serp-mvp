@@ -7,7 +7,7 @@
 размечает каждый новый URL: подходит ли сайт для размещения, какие казино-бренды упомянуты, контакт для связи.
 
 **Результат прогона:** [`results.xlsx`](results.xlsx) (вкладки Sites и Positions) и Google Sheet (ссылка в письме).
-Инструкция для менеджера: [docs/MANAGER.md](docs/MANAGER.md). Подключение Sheets, GitHub и бота: [docs/SETUP.md](docs/SETUP.md).
+Инструкция для менеджера: [docs/MANAGER.md](docs/MANAGER.md). Запуск у себя и подключение бонусов: [docs/SETUP.md](docs/SETUP.md).
 
 ## Запуск
 
