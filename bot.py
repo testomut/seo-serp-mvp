@@ -140,10 +140,16 @@ def telegram_webhook():
 
 
 if os.getenv("RENDER_EXTERNAL_URL"):  # Render sets this variable to the service's public address
-    requests.post(f"{TELEGRAM_API}/setWebhook", json={
-        "url": os.getenv("RENDER_EXTERNAL_URL") + "/telegram",
-        "secret_token": os.getenv("TELEGRAM_WEBHOOK_SECRET"),
-    }, timeout=20)
+    missing = [name for name in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_WEBHOOK_SECRET")
+               if not os.getenv(name)]
+    if missing:
+        log.error("Webhook not registered, missing environment variables: %s", ", ".join(missing))
+    else:
+        answer = requests.post(f"{TELEGRAM_API}/setWebhook", json={
+            "url": os.getenv("RENDER_EXTERNAL_URL") + "/telegram",
+            "secret_token": os.getenv("TELEGRAM_WEBHOOK_SECRET"),
+        }, timeout=20).json()
+        log.info("Telegram webhook: %s", answer)
 
 
 # ---------- local: polling mode ----------
