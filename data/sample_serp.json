@@ -1,0 +1,15 @@
+{
+  "_note": "DEMO data used only when SERPAPI_KEY is not set. Not a real snapshot of Google results.",
+  "online casino canada": [
+    {"position": 1, "url": "https://www.casino.org/ca/", "title": "Best Online Casinos in Canada"},
+    {"position": 2, "url": "https://en.wikipedia.org/wiki/Online_casino", "title": "Online casino - Wikipedia"},
+    {"position": 3, "url": "https://www.jackpotcity.com/", "title": "Jackpot City Casino"},
+    {"position": 4, "url": "https://www.covers.com/casino/canada", "title": "Best Canadian Online Casinos"},
+    {"position": 5, "url": "https://www.playnow.com/casino/", "title": "PlayNow Casino"}
+  ],
+  "no deposit bonus canada": [
+    {"position": 1, "url": "https://www.nodepositbonus.cc/", "title": "No Deposit Bonus Codes"},
+    {"position": 2, "url": "https://www.casino.org/ca/", "title": "Best Online Casinos in Canada"},
+    {"position": 3, "url": "https://www.reddit.com/r/onlinecasino/", "title": "r/onlinecasino"}
+  ]
+}
