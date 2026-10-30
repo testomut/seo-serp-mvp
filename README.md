@@ -1,5 +1,8 @@
 # SEO SERP MVP
 
+[![tests](https://github.com/testomut/seo-serp-mvp/actions/workflows/tests.yml/badge.svg)](https://github.com/testomut/seo-serp-mvp/actions/workflows/tests.yml)
+[![daily](https://github.com/testomut/seo-serp-mvp/actions/workflows/daily.yml/badge.svg)](https://github.com/testomut/seo-serp-mvp/actions/workflows/daily.yml)
+
 Каждый день собирает топ-10 Google.ca (mobile) по списку ключей, сохраняет позиции с историей и с помощью LLM
 размечает каждый новый URL: подходит ли сайт для размещения, какие казино-бренды упомянуты, контакт для связи.
 
