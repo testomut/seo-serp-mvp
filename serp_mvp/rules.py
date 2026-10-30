@@ -1,6 +1,7 @@
 """Labelling without an LLM: simple, predictable rules. Used when GEMINI_API_KEY is not set
 or the LLM call fails. Less accurate than the LLM, so every row records which method was used."""
 import re
+from collections import Counter
 from urllib.parse import urlparse
 
 import config
@@ -23,6 +24,21 @@ def find_brands(text, brands):
         if re.search(r"\b" + re.escape(brand) + r"\b", text, re.IGNORECASE):
             found.append(brand)
     return found
+
+
+def brand_key(name):
+    """One key for all spellings of a brand: "Tonybet Casino", "TonyBet", "Toppz.ca" -> "tonybet", "tonybet", "toppz"."""
+    name = re.sub(r"(\s+casino|\.com|\.ca)+$", "", name.strip(), flags=re.IGNORECASE)
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def brand_names(brand_lists, known_brands):
+    """Pick one spelling per brand: from brands.txt if it is there, otherwise the most frequent one."""
+    names = {}
+    for name, _ in Counter(b for brands in brand_lists for b in brands).most_common():
+        names.setdefault(brand_key(name), name)
+    names.update({brand_key(name): name for name in known_brands})
+    return names
 
 
 def domain_of(url):

@@ -28,3 +28,11 @@ def test_review_site_is_relevant():
 def test_unloaded_page_is_unknown():
     label = rules.classify("https://some-site.example/", None, BRANDS)
     assert label["relevant"] is None
+
+
+def test_brand_spellings_are_merged():
+    assert rules.brand_key("Tonybet Casino") == rules.brand_key("TonyBet") == "tonybet"
+    assert rules.brand_key("Hell Spin") == rules.brand_key("HellSpin Casino")
+    names = rules.brand_names([["Tonybet Casino", "Hell Spin"], ["TonyBet"], ["TonyBet"]], ["HellSpin"])
+    assert names["tonybet"] == "TonyBet"    # the most frequent spelling
+    assert names["hellspin"] == "HellSpin"  # the spelling from brands.txt wins

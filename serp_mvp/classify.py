@@ -68,10 +68,10 @@ def ask_gemini(url, page):
     response.raise_for_status()
     answer = json.loads(response.json()["candidates"][0]["content"]["parts"][0]["text"])
 
-    # The LLM sometimes repeats a brand with different capitalisation ("Jackpot City" / "Jackpot city").
+    # The LLM sometimes repeats a brand in different spellings ("Jackpot City" / "Jackpot City Casino").
     brands = {}
     for brand in answer.get("brands", []):
-        brands.setdefault(brand.strip().lower(), brand.strip())
+        brands.setdefault(rules.brand_key(brand), brand.strip())
 
     return {
         "relevant": bool(answer.get("relevant")),

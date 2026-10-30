@@ -11,6 +11,7 @@ from datetime import datetime
 
 from openpyxl import Workbook
 
+from serp_mvp import rules
 from serp_mvp.rules import domain_of
 
 
@@ -88,16 +89,20 @@ HELP_TABLE = [
 
 
 def sites_table(db):
-    """Rows for the "Sites" tab: header first, relevant sites on top."""
+    """Rows for the "Sites" tab: header first, relevant sites on top.
+    Brand spellings are unified here, so older rows get cleaned up too ("Tonybet Casino" -> "TonyBet")."""
     rows = [["URL", "Domain", "Relevant", "Type", "Brands", "Contact", "Reason", "Checked by",
              "Best position", "Keywords"]]
-    for row in db.execute("""
+    sites = db.execute("""
         SELECT s.*, MIN(p.position) AS best_position, GROUP_CONCAT(DISTINCT p.keyword) AS keywords
         FROM sites s JOIN positions p ON p.url = s.url
         GROUP BY s.url ORDER BY s.relevant DESC, best_position
-    """):
+    """).fetchall()
+    names = rules.brand_names([json.loads(row["brands"]) for row in sites], rules.load_brands())
+    for row in sites:
+        brands = dict.fromkeys(names[rules.brand_key(b)] for b in json.loads(row["brands"]))  # unique, in order
         rows.append([row["url"], row["domain"], row["relevant"], row["site_type"],
-                     ", ".join(json.loads(row["brands"])), row["contact"], row["reason"], row["method"],
+                     ", ".join(brands), row["contact"], row["reason"], row["method"],
                      row["best_position"], row["keywords"]])
     return rows
 
