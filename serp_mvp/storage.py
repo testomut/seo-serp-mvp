@@ -61,6 +61,32 @@ def save_site(db, url, label):
         )
 
 
+HELP_TABLE = [
+    ["Вкладка", "Колонка", "Что значит"],
+    ["Sites", "", "Все уникальные сайты из выдачи. Подходящие сверху, внутри - по лучшей позиции."],
+    ["Sites", "URL / Domain", "Адрес найденной страницы и сайт."],
+    ["Sites", "Relevant", "Подходит ли сайт для размещения наших брендов. yes - обзорник, рейтинг или сайт с бонусами; "
+                          "no - сайт казино, Википедия, форум, новости, регулятор; "
+                          "unknown - сайт не открылся (защита от ботов), стоит проверить вручную."],
+    ["Sites", "Type", "Тип сайта: review (обзоры, рейтинги, бонусы), casino (сайт самого казино), wiki, news, forum, "
+                      "regulator, other, unknown."],
+    ["Sites", "Brands", "Казино-бренды, упомянутые на странице."],
+    ["Sites", "Contact", "Email или страница Contact для связи с владельцем сайта. Пусто - не найдено."],
+    ["Sites", "Reason", "Короткое объяснение, почему так решено."],
+    ["Sites", "Checked by", "Кто размечал: gemini (ИИ, точнее) или rules (простые правила, если ИИ недоступен "
+                            "или страница не открылась). Такие сайты перепроверяются ИИ при следующем прогоне."],
+    ["Sites", "Best position", "Лучшее место сайта в Google среди всех ключей."],
+    ["Sites", "Keywords", "По каким ключам сайт найден."],
+    ["Positions", "", "История позиций: строка - ключ + URL, колонки - даты прогонов. "
+                      "Пусто в колонке даты - в тот день сайта в топ-10 не было."],
+    ["Keywords", "", "Ключи для поиска. Менеджер редактирует эту вкладку сам, изменения подхватываются "
+                     "на следующем прогоне."],
+    ["Keywords", "keyword", "Фраза, которую ищем в Google (Канада, мобильная выдача)."],
+    ["Keywords", "cluster", "Группа ключа, для удобства."],
+    ["Keywords", "active", "yes - искать, no - не искать (история сохраняется)."],
+]
+
+
 def sites_table(db):
     """Rows for the "Sites" tab: header first, relevant sites on top."""
     rows = [["URL", "Domain", "Relevant", "Type", "Brands", "Contact", "Reason", "Checked by",
@@ -98,4 +124,7 @@ def export_excel(db, path):
     history = workbook.create_sheet("Positions")
     for row in positions_table(db):
         history.append(row)
+    help_tab = workbook.create_sheet("Help", 0)  # first tab
+    for row in HELP_TABLE:
+        help_tab.append(row)
     workbook.save(path)

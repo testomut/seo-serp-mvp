@@ -63,8 +63,11 @@ def deactivate_keyword(keyword):
 
 def write_results(db):
     spreadsheet = open_spreadsheet()
-    for title, rows in [("Sites", storage.sites_table(db)), ("Positions", storage.positions_table(db))]:
+    tables = [("Help", storage.HELP_TABLE), ("Sites", storage.sites_table(db)),
+              ("Positions", storage.positions_table(db))]
+    for title, rows in tables:
         tab = get_tab(spreadsheet, title)
         tab.clear()
         rows = [["" if value is None else value for value in row] for row in rows]
         tab.update(values=rows, range_name="A1")
+    spreadsheet.worksheet("Help").update_index(0)  # keep the description as the first tab
