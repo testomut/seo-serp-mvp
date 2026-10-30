@@ -6,6 +6,7 @@ Two ways to run it:
 - on Render (webhook):  gunicorn bot:app      Telegram sends each message to this web app
 - locally (polling):    python bot.py         the bot asks Telegram for new messages in a loop
 """
+import hashlib
 import logging
 import os
 import time
@@ -131,9 +132,15 @@ def health():
     return "ok"
 
 
+def webhook_secret():
+    """Telegram allows only letters, digits, "_" and "-" in the secret, while Render's generated
+    value may contain "+/=". A hash of it always fits."""
+    return hashlib.sha256(os.getenv("TELEGRAM_WEBHOOK_SECRET", "").encode()).hexdigest()
+
+
 @app.post("/telegram")
 def telegram_webhook():
-    if request.headers.get("X-Telegram-Bot-Api-Secret-Token") != os.getenv("TELEGRAM_WEBHOOK_SECRET"):
+    if request.headers.get("X-Telegram-Bot-Api-Secret-Token") != webhook_secret():
         return "forbidden", 403
     on_update(request.get_json(force=True))
     return "ok"
@@ -147,7 +154,7 @@ if os.getenv("RENDER_EXTERNAL_URL"):  # Render sets this variable to the service
     else:
         answer = requests.post(f"{TELEGRAM_API}/setWebhook", json={
             "url": os.getenv("RENDER_EXTERNAL_URL") + "/telegram",
-            "secret_token": os.getenv("TELEGRAM_WEBHOOK_SECRET"),
+            "secret_token": webhook_secret(),
         }, timeout=20).json()
         log.info("Telegram webhook: %s", answer)
 
