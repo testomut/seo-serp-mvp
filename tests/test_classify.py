@@ -64,4 +64,4 @@ def test_next_llm_is_used_when_first_fails(monkeypatch):
         ("claude", "ANTHROPIC_API_KEY", lambda prompt: (ANSWER, "claude-test")),
     ])
     label = classify.classify("https://site.example/", PAGE, [])
-    assert label["method"] == "claude (claude-test)"
+    assert label["method"].startswith("claude (claude-test)")

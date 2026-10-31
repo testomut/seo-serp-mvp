@@ -6,6 +6,7 @@ import os
 
 import requests
 
+import config
 from serp_mvp import rules
 from serp_mvp.retry import with_retries
 
@@ -17,11 +18,14 @@ Look at the web page below and answer in JSON with exactly these fields:
 - "site_type": one of "review" (casino reviews, rankings, bonus lists, comparison sites),
   "casino" (the website of a casino operator itself), "wiki", "news", "forum", "regulator", "other".
 - "relevant": true only for "review" sites. Casino operators, Wikipedia, forums, news and regulators are false.
-- "brands": list of online-casino brand names mentioned on the page (empty list if none). Only casino
-  operators (e.g. "Jackpot City", "Spin Casino"). NOT slot or game titles, game providers, payment methods,
-  sportsbooks without a casino, or prediction markets. Each brand once.
-- "contact": an email or contact-page URL for reaching the site owner. Use ONLY the candidates given below,
-  never invent one. Empty string if there is none.
+- "brands": every real-money online-casino operator mentioned on the page (empty list if none), e.g.
+  "Jackpot City", "Spin Casino". Go through all rankings, tables and bonus cards; brands often appear only as
+  logos, written in the text as [image: ...]. NOT slot or game titles, game providers, payment methods,
+  sportsbooks without a casino, prediction markets (e.g. Polymarket), free-to-play or social games and
+  free poker apps (e.g. Cosmo Spins, Replay Poker). Each brand once.
+- "contact": an email or contact-page URL for reaching the site owner about advertising. Use ONLY the
+  candidates given below, never invent one. Prefer advertising / partnership contacts, then a general
+  contact; never a careers page or a personal author email if a general one exists. Empty string if none.
 - "reason": one short sentence explaining the decision.
 
 Answer with the JSON object only, no other text.
@@ -107,7 +111,7 @@ def classify(url, page, brands):
     for name, ask in available_llms():
         try:
             text, model = with_retries(lambda: ask(prompt), attempts=3, first_pause=10)
-            return to_label(text, f"{name} ({model})", page)
+            return to_label(text, f"{name} ({model}), {config.LABEL_VERSION}", page)
         except Exception as error:
             log.warning("%s failed for %s (%s), trying the next option", name, url, error)
     return rules.classify(url, page, brands)

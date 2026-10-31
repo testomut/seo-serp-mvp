@@ -14,6 +14,7 @@ from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 
+import config
 from serp_mvp import rules
 from serp_mvp.rules import domain_of
 
@@ -56,13 +57,13 @@ def save_failed_search(db, run_date, keyword):
 
 
 def urls_to_check(db, run_date, llm_available):
-    """URLs from today's results that have no label yet.
-    If an LLM is available now, also re-check URLs that were labelled only by rules before."""
+    """URLs from today's results that have no label yet. If an LLM is available now, also re-check URLs
+    labelled by rules or by an older prompt (method doesn't end with the current LABEL_VERSION)."""
     rows = db.execute("""
         SELECT DISTINCT p.url FROM positions p
         LEFT JOIN sites s ON s.url = p.url
-        WHERE p.run_date = ? AND (s.url IS NULL OR (? AND s.method = 'rules'))
-    """, (run_date, llm_available)).fetchall()
+        WHERE p.run_date = ? AND (s.url IS NULL OR (? AND s.method NOT LIKE ?))
+    """, (run_date, llm_available, f"%, {config.LABEL_VERSION}")).fetchall()
     return [row["url"] for row in rows]
 
 

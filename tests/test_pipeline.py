@@ -113,3 +113,13 @@ def test_affiliate_and_foreign_links_are_not_contacts():
               <a href="https://casino.example/contact">Contact casino</a>"""
     page = fetch.parse("https://reviews.example/top/", html)
     assert page["contact_links"] == ["https://reviews.example/contact-us"]
+
+
+def test_logos_contacts_and_geo_blocks():
+    html = """<title>Top casinos</title><img alt="Lucky Tiger"> <img alt="">
+              <a href="/careers/">Contact us about jobs</a> <a href="/contact/">Contact</a>
+              <a href="/advertise/">Advertise with us</a>""" + "<p>text</p>" * 400
+    page = fetch.parse("https://reviews.example/", html)
+    assert "[image: Lucky Tiger]" in page["text"]
+    assert page["contact_links"] == ["https://reviews.example/advertise/", "https://reviews.example/contact/"]
+    assert fetch.parse("https://casino.example/", "<p>Sorry, this site is not available in your country.</p>") is None

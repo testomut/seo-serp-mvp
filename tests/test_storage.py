@@ -1,3 +1,4 @@
+import config
 from serp_mvp import storage
 
 RESULTS = [
@@ -27,7 +28,8 @@ def test_next_day_adds_history():
 def test_labelled_url_is_not_checked_again():
     db = storage.connect(":memory:")
     storage.save_positions(db, "2026-11-01", "kw", RESULTS, "sample")
-    label = {"relevant": True, "site_type": "review", "brands": [], "contact": "", "reason": "", "method": "gemini"}
+    label = {"relevant": True, "site_type": "review", "brands": [], "contact": "", "reason": "",
+             "method": f"gemini (test), {config.LABEL_VERSION}"}
     storage.save_site(db, "https://a.com/", label)
     assert storage.urls_to_check(db, "2026-11-01", llm_available=True) == ["https://b.com/"]
 
@@ -38,4 +40,13 @@ def test_rules_labels_are_rechecked_when_llm_appears():
     label = {"relevant": False, "site_type": "other", "brands": [], "contact": "", "reason": "", "method": "rules"}
     storage.save_site(db, "https://a.com/", label)
     assert storage.urls_to_check(db, "2026-11-01", llm_available=False) == []
+    assert storage.urls_to_check(db, "2026-11-01", llm_available=True) == ["https://a.com/"]
+
+
+def test_labels_from_an_older_prompt_are_rechecked():
+    db = storage.connect(":memory:")
+    storage.save_positions(db, "2026-11-01", "kw", RESULTS[:1], "sample")
+    label = {"relevant": True, "site_type": "review", "brands": [], "contact": "", "reason": "",
+             "method": "gemini (test)"}
+    storage.save_site(db, "https://a.com/", label)
     assert storage.urls_to_check(db, "2026-11-01", llm_available=True) == ["https://a.com/"]
