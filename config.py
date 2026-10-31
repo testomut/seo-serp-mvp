@@ -11,6 +11,8 @@ BRANDS_FILE = "data/brands.txt"
 SAMPLE_SERP_FILE = "data/sample_serp.json"
 DB_FILE = "data/serp.db"
 EXCEL_FILE = "results.xlsx"
+DEMO_DB_FILE = "data/demo.db"           # --demo never touches the real database
+DEMO_EXCEL_FILE = "demo-results.xlsx"
 
 PAGE_TEXT_LIMIT = 12000     # characters of page text sent to the LLM
 LLM_PAUSE_SECONDS = 5       # pause between LLM calls (free Gemini has a per-minute limit)

@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 
 import config
 from serp_mvp.retry import with_retries
+from serp_mvp.rules import domain_of
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 "
@@ -15,6 +16,8 @@ HEADERS = {
 }
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 CONTACT_WORDS = ("contact", "advertise with us", "write for us", "work with us")
+# Affiliate redirects to a casino ("/visit/stake/") are not the site owner's contact
+AFFILIATE_PATHS = ("/visit/", "/go/", "/out/", "/goto/", "/recommends/", "/refer/", "/click")
 
 
 def get_page(url):
@@ -42,7 +45,10 @@ def parse(url, html):
         if href.startswith("mailto:"):
             emails.append(href.removeprefix("mailto:").split("?")[0])
         elif any(word in link.get_text().lower() for word in CONTACT_WORDS) or "/contact" in href.lower():
-            contact_links.append(urljoin(url, href))
+            full_url = urljoin(url, href)
+            # Only the site's own pages, never a redirect to a casino
+            if domain_of(full_url) == domain_of(url) and not any(p in full_url.lower() for p in AFFILIATE_PATHS):
+                contact_links.append(full_url)
 
     # Emails are taken only from visible text and mailto links, not from scripts
     # (scripts contain technical addresses like error-tracker keys).

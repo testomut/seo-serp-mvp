@@ -4,12 +4,15 @@ Two tables:
 - positions: one row per (date, keyword, position). Re-running on the same day replaces that day's rows,
   so there are never duplicates, and every new day adds to the position history.
 - sites: one row per unique URL with its label. A URL is labelled once and reused on later runs.
+- searches: one row per (date, keyword): "ok" with the number of results, or "failed". So a failed search is
+  shown as "no data", not as "the site dropped out of the top".
 """
 import json
 import sqlite3
 from datetime import datetime
 
 from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
 
 from serp_mvp import rules
 from serp_mvp.rules import domain_of
@@ -27,6 +30,10 @@ def connect(path):
             url TEXT PRIMARY KEY, domain TEXT, relevant TEXT, site_type TEXT, brands TEXT,
             contact TEXT, reason TEXT, method TEXT, checked_at TEXT
         );
+        CREATE TABLE IF NOT EXISTS searches (
+            run_date TEXT, keyword TEXT, status TEXT, results INTEGER,
+            PRIMARY KEY (run_date, keyword)
+        );
     """)
     return db
 
@@ -39,6 +46,13 @@ def save_positions(db, run_date, keyword, results, source):
                 "INSERT INTO positions VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (run_date, keyword, r["position"], r["url"], domain_of(r["url"]), r["title"], source),
             )
+        db.execute("INSERT OR REPLACE INTO searches VALUES (?, ?, 'ok', ?)", (run_date, keyword, len(results)))
+
+
+def save_failed_search(db, run_date, keyword):
+    """Remember the failure, but never overwrite a successful search made earlier the same day."""
+    with db:
+        db.execute("INSERT OR IGNORE INTO searches VALUES (?, ?, 'failed', 0)", (run_date, keyword))
 
 
 def urls_to_check(db, run_date, llm_available):
@@ -84,7 +98,8 @@ HELP_TABLE = [
     ["cluster", "Группа ключа, для удобства."],
     ["active", "yes - искать, no - не искать (история сохраняется)."],
     ["Positions - История позиций: строка - ключ + URL, колонки - даты прогонов. "
-     "Пусто в колонке даты - в тот день сайта в топ-10 не было.", ""],
+     "Пусто в колонке даты - в тот день сайта в топ-10 не было. "
+     "no data - поиск по ключу в тот день не удался, о позиции ничего не известно.", ""],
 ]
 
 
@@ -109,27 +124,40 @@ def sites_table(db):
 
 def positions_table(db):
     """Rows for the "Positions" tab: one row per keyword + URL, one column per date."""
-    dates = [r["run_date"] for r in db.execute("SELECT DISTINCT run_date FROM positions ORDER BY run_date")]
+    dates = [r["run_date"] for r in db.execute(
+        "SELECT run_date FROM positions UNION SELECT run_date FROM searches ORDER BY run_date")]
     rows = [["Keyword", "URL", "Domain"] + dates]
+    failed = {(r["keyword"], r["run_date"]) for r in db.execute("SELECT * FROM searches WHERE status = 'failed'")}
     table = {}
     for r in db.execute("SELECT * FROM positions"):
         key = (r["keyword"], r["url"], r["domain"])
         table.setdefault(key, {})[r["run_date"]] = r["position"]
     for (keyword, url, domain), by_date in sorted(table.items()):
-        rows.append([keyword, url, domain] + [by_date.get(d, "") for d in dates])
+        empty = lambda d: "no data" if (keyword, d) in failed else ""
+        rows.append([keyword, url, domain] + [by_date.get(d, empty(d)) for d in dates])
     return rows
+
+
+# Column widths for the Excel file; columns not listed get 12
+WIDTHS = {"Help": [40, 100], "Sites": [45, 25, 10, 10, 40, 35, 50, 25, 8, 40], "Positions": [30, 50, 25]}
 
 
 def export_excel(db, path):
     workbook = Workbook()
-    sites = workbook.active
-    sites.title = "Sites"
-    for row in sites_table(db):
-        sites.append(row)
-    history = workbook.create_sheet("Positions")
-    for row in positions_table(db):
-        history.append(row)
-    help_tab = workbook.create_sheet("Help", 0)  # first tab
-    for row in HELP_TABLE:
-        help_tab.append(row)
+    workbook.remove(workbook.active)
+    for title, rows in [("Help", HELP_TABLE), ("Sites", sites_table(db)), ("Positions", positions_table(db))]:
+        tab = workbook.create_sheet(title)
+        for row in rows:
+            tab.append(row)
+        # Readable view: bold frozen header, filters, column widths, long text wrapped
+        tab.freeze_panes = "A2"
+        tab.auto_filter.ref = tab.dimensions
+        for cell in tab[1]:
+            cell.font = Font(bold=True)
+        for column in tab.iter_cols(min_row=2):
+            for cell in column:
+                cell.alignment = Alignment(wrap_text=True, vertical="top")
+        for number, column in enumerate(tab.columns):
+            width = WIDTHS[title][number] if number < len(WIDTHS[title]) else 12
+            tab.column_dimensions[column[0].column_letter].width = width
     workbook.save(path)

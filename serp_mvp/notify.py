@@ -27,9 +27,9 @@ def send_telegram(chat_id, text):
         log.warning("Telegram message failed: %s", error)
 
 
-def build_summary(run_date, keyword_count, failed_keywords, new_relevant, sheet_link):
-    """new_relevant: list of (url, label) for sites first found relevant in this run."""
-    lines = [f"SEO run {run_date} finished",
+def build_summary(run_date, status, keyword_count, failed_keywords, short_keywords, new_relevant, sheet_link):
+    """status: ok / partial / failed. new_relevant: list of (url, label) for sites first found relevant."""
+    lines = [f"SEO run {run_date} finished: {status}",
              f"Keywords checked: {keyword_count - len(failed_keywords)}/{keyword_count}",
              f"New relevant sites: {len(new_relevant)}"]
     for url, label in new_relevant[:10]:
@@ -39,6 +39,8 @@ def build_summary(run_date, keyword_count, failed_keywords, new_relevant, sheet_
         lines.append(f"\n...and {len(new_relevant) - 10} more in the table")
     if failed_keywords:
         lines.append("\nFailed keywords: " + ", ".join(failed_keywords))
+    if short_keywords:
+        lines.append("\nFewer than 10 results from Google: " + ", ".join(short_keywords))
     if sheet_link:
         lines.append(f"\nTable: {sheet_link}")
     return "\n".join(lines)

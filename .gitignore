@@ -4,3 +4,5 @@ __pycache__/
 .venv/
 google-credentials.json
 run.log
+data/demo.db
+demo-results.xlsx

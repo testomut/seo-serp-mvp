@@ -75,6 +75,8 @@ def ask_openai(prompt):
     return response.json()["choices"][0]["message"]["content"], model
 
 
+SITE_TYPES = ("review", "casino", "wiki", "news", "forum", "regulator", "other")
+
 # (name, key in .env, function) - in the order they are tried
 LLMS = [
     ("gemini", "GEMINI_API_KEY", ask_gemini),
@@ -105,15 +107,29 @@ def classify(url, page, brands):
     for name, ask in available_llms():
         try:
             text, model = with_retries(lambda: ask(prompt), attempts=3, first_pause=10)
-            return to_label(text, f"{name} ({model})")
+            return to_label(text, f"{name} ({model})", page)
         except Exception as error:
             log.warning("%s failed for %s (%s), trying the next option", name, url, error)
     return rules.classify(url, page, brands)
 
 
-def to_label(text, method):
-    """Turn the LLM's JSON answer into our label."""
+def to_label(text, method, page):
+    """Turn the LLM's JSON answer into our label. A broken answer raises an error, so it is retried or the
+    next LLM / the rules decide; it is never saved as a finished label."""
     answer = json.loads(text[text.find("{"):text.rfind("}") + 1])  # Claude may wrap JSON in ```json ... ```
+    if answer.get("site_type") not in SITE_TYPES:
+        raise ValueError(f"site_type is {answer.get('site_type')!r}")
+    if not isinstance(answer.get("relevant"), bool):  # "false" as a string would count as true
+        raise ValueError(f"relevant is {answer.get('relevant')!r}, not true/false")
+    if answer["relevant"] != (answer["site_type"] == "review"):
+        raise ValueError("relevant does not match site_type")
+    if not isinstance(answer.get("brands"), list) or not all(isinstance(b, str) for b in answer["brands"]):
+        raise ValueError("brands is not a list of names")
+
+    # The contact must be one of the candidates found on the page; anything else is dropped.
+    contact = answer.get("contact") or ""
+    if contact not in page["emails"] + page["contact_links"]:
+        contact = ""
 
     # The LLM sometimes repeats a brand in different spellings ("Jackpot City" / "Jackpot City Casino").
     brands = {}
@@ -124,7 +140,7 @@ def to_label(text, method):
         "relevant": bool(answer.get("relevant")),
         "site_type": answer.get("site_type", "other"),
         "brands": list(brands.values()),
-        "contact": answer.get("contact", ""),
-        "reason": answer.get("reason", ""),
+        "contact": contact,
+        "reason": str(answer.get("reason", "")),
         "method": method,
     }

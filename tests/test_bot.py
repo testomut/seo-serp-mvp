@@ -18,7 +18,7 @@ def test_run_without_github_settings(monkeypatch):
 
 def test_summary_lists_new_sites():
     label = {"brands": ["Betway"], "contact": "a@b.com"}
-    text = notify.build_summary("2026-11-01", 10, ["interac casino"], [("https://x.com/", label)], "")
+    text = notify.build_summary("2026-11-01", "partial", 10, ["interac casino"], [], [("https://x.com/", label)], "")
     assert "Keywords checked: 9/10" in text
     assert "https://x.com/" in text
     assert "Failed keywords: interac casino" in text

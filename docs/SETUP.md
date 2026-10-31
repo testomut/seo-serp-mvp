@@ -7,10 +7,10 @@ git clone https://github.com/testomut/seo-serp-mvp.git && cd seo-serp-mvp
 python -m venv .venv && .venv\Scripts\activate      # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-python main.py
+python main.py --demo
 ```
 
-Работает сразу: демо-выдача, разметка правилами, результат в `results.xlsx`.
+Демо-выдача, отдельные `data/demo.db` и `demo-results.xlsx` (рабочие данные не трогаются).
 
 ## 2. Реальные данные
 
