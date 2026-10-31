@@ -144,22 +144,14 @@ def to_label(text, method, page):
     if not isinstance(answer.get("brands"), list) or not all(isinstance(b, str) for b in answer["brands"]):
         raise ValueError("brands is not a list of names")
 
-    # The contact must be one of the candidates found on the page; anything else is dropped.
-    contact = answer.get("contact") or ""
-    if contact not in page["emails"] + page["contact_links"]:
-        contact = ""
-
-    # The LLM sometimes repeats a brand in different spellings ("Jackpot City" / "Jackpot City Casino").
-    brands = {}
-    for brand in answer.get("brands", []):
-        brands.setdefault(rules.brand_key(brand), brand.strip())
-    for not_brand in rules.load_brands(config.NOT_BRANDS_FILE):  # games and products, e.g. "Mega Moolah"
-        brands.pop(rules.brand_key(not_brand), None)
+    # The contact is always one of the candidates found on the page, the best kind available:
+    # advertising -> general contact -> author email. An invented contact is never used.
+    contact = rules.pick_contact(page, preferred=answer.get("contact") or "")
 
     return {
         "relevant": bool(answer.get("relevant")),
         "site_type": answer.get("site_type", "other"),
-        "brands": list(brands.values()),
+        "brands": rules.clean_brands(answer["brands"]),  # spelling variants, games, sports products
         "contact": contact,
         "reason": str(answer.get("reason", "")),
         "method": method,

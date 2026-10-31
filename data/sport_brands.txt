@@ -1,0 +1,15 @@
+# Sportsbook product = casino brand of the same operator. Only operators known to run a casino.
+# A sports name that is not listed here is dropped from Brands (it may be a bookmaker without a casino).
+LeoVegas Sports = LeoVegas
+888 Sports = 888casino
+888sport = 888casino
+Guts Sports = Guts
+Betway Sportsbook = Betway
+Bet365 Sportsbook = bet365
+BetVictor Sports = BetVictor
+BetMGM Sportsbook = BetMGM
+BetRivers Sportsbook = BetRivers
+PowerPlay Sportsbook = PowerPlay
+DraftKings Sportsbook = DraftKings
+FanDuel Sportsbook = FanDuel
+Partysports = PartyCasino

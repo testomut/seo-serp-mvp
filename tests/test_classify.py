@@ -47,9 +47,11 @@ def test_broken_answer_is_not_saved_as_llm_label(monkeypatch):
     assert label["method"] == "rules"  # rules labels are re-checked by the LLM on the next run
 
 
-def test_invented_contact_is_dropped():
+def test_invented_contact_is_replaced_by_one_from_the_page():
     answer = ANSWER.replace('"contact": "a@b.com"', '"contact": "https://site.example/visit/stake/"')
-    assert classify.to_label(answer, "gemini (test)", PAGE)["contact"] == ""
+    assert classify.to_label(answer, "gemini (test)", PAGE)["contact"] == "a@b.com"  # found on the page
+    no_candidates = {**PAGE, "emails": []}
+    assert classify.to_label(answer, "gemini (test)", no_candidates)["contact"] == ""
 
 
 def test_next_llm_is_used_when_first_fails(monkeypatch):

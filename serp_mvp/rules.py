@@ -39,7 +39,7 @@ def find_brands(text, brands):
 
 def brand_key(name):
     """One key for all spellings of a brand: "Tonybet Casino", "TonyBet", "Toppz.ca" -> "tonybet", "tonybet", "toppz"."""
-    name = re.sub(r"(\s+casino|\.com|\.ca)+$", "", name.strip(), flags=re.IGNORECASE)
+    name = re.sub(r"(\s*casino|\.com|\.ca)+$", "", name.strip(), flags=re.IGNORECASE) or name  # "888casino" too
     return re.sub(r"[^a-z0-9]", "", name.lower())
 
 
@@ -56,12 +56,44 @@ def domain_of(url):
     return urlparse(url).netloc.lower().removeprefix("www.")
 
 
-def pick_contact(page):
-    if page and page["emails"]:
-        return page["emails"][0]
-    if page and page["contact_links"]:
-        return page["contact_links"][0]
-    return ""
+def clean_brands(names):
+    """Unique casino brands: games from not_brands.txt dropped, sports products mapped to the operator's casino
+    brand by sport_brands.txt; a sports product not listed there is dropped (may be a bookmaker without casino)."""
+    not_brands = {brand_key(name) for name in load_brands(config.NOT_BRANDS_FILE)}
+    sport = {brand_key(line.split("=")[0]): line.split("=")[1].strip() for line in load_brands(config.SPORT_BRANDS_FILE)}
+    brands = {}
+    for name in names:
+        name = sport.get(brand_key(name), name.strip())
+        if brand_key(name) in not_brands or re.search(r"(sport|sports|sportsbook)$", name.lower()):
+            continue
+        brands.setdefault(brand_key(name), name)
+    return list(brands.values())
+
+
+AD_WORDS = ("advertis", "partner", "affiliate", "marketing", "sales", "business", "media")
+GENERIC_EMAIL_WORDS = ("info", "contact", "hello", "support", "admin", "team", "office", "mail", "editor",
+                       "enquir", "press", "help", "feedback")
+
+
+def contact_level(contact):
+    """0 = advertising email or Advertise/Partnerships page, 1 = general contact, 2 = personal (author) email."""
+    if "@" in contact:
+        local = contact.split("@")[0].lower()
+        if any(word in local for word in AD_WORDS):
+            return 0
+        return 1 if any(word in local for word in GENERIC_EMAIL_WORDS) else 2
+    return 0 if any(word in contact.lower() for word in AD_WORDS) else 1
+
+
+def pick_contact(page, preferred=""):
+    """The best contact found on the page. Among equally good ones, the LLM's choice (preferred) wins."""
+    candidates = (page["emails"] + page["contact_links"]) if page else []
+    if not candidates:
+        return ""
+    best = min(contact_level(c) for c in candidates)
+    if preferred in candidates and contact_level(preferred) == best:
+        return preferred
+    return next(c for c in candidates if contact_level(c) == best)
 
 
 def classify(url, page, brands):

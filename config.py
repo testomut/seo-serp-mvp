@@ -9,6 +9,7 @@ TOP_N = 10                  # how many results to keep per keyword
 KEYWORDS_FILE = "keywords.csv"
 BRANDS_FILE = "data/brands.txt"
 NOT_BRANDS_FILE = "data/not_brands.txt"   # games and products that are not casinos
+SPORT_BRANDS_FILE = "data/sport_brands.txt"  # "LeoVegas Sports = LeoVegas"
 SAMPLE_SERP_FILE = "data/sample_serp.json"
 DB_FILE = "data/serp.db"
 EXCEL_FILE = "results.xlsx"

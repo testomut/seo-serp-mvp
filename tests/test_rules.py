@@ -36,3 +36,21 @@ def test_brand_spellings_are_merged():
     names = rules.brand_names([["Tonybet Casino", "Hell Spin"], ["TonyBet"], ["TonyBet"]], ["HellSpin"])
     assert names["tonybet"] == "TonyBet"    # the most frequent spelling
     assert names["hellspin"] == "HellSpin"  # the spelling from brands.txt wins
+
+
+def test_sports_products_become_casino_brands_only_when_listed():
+    names = ["LeoVegas Sports", "LeoVegas", "888 Sports", "Unknown Sportsbook", "Sports Interaction", "Mega Moolah"]
+    assert rules.clean_brands(names) == ["LeoVegas", "888casino", "Sports Interaction"]
+
+
+def test_contact_priority():
+    page = {"emails": ["carol.smith@site.com", "info@site.com"], "contact_links": ["https://site.com/contact/"]}
+    assert rules.pick_contact(page) == "info@site.com"  # general beats author email
+    page["contact_links"].append("https://site.com/advertise-with-us/")
+    assert rules.pick_contact(page) == "https://site.com/advertise-with-us/"  # advertising beats general
+    only_author = {"emails": ["carol.smith@site.com"], "contact_links": []}
+    assert rules.pick_contact(only_author) == "carol.smith@site.com"  # author email when nothing else
+
+
+def test_casino_without_space_is_merged():
+    assert rules.brand_key("888casino") == rules.brand_key("888 Casino")

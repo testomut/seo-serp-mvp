@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 import config
 from serp_mvp.retry import with_retries
-from serp_mvp.rules import domain_of
+from serp_mvp.rules import AD_WORDS, domain_of
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 "
@@ -16,7 +16,7 @@ HEADERS = {
 }
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 # Contact links, best first: advertising / partnerships, then a general contact page
-CONTACT_WORDS = [("advertis", "partner", "affiliate"), ("contact", "write for us", "work with us")]
+CONTACT_WORDS = [AD_WORDS, ("contact", "write for us", "work with us")]
 NOT_CONTACT_WORDS = ("career", "jobs", "vacanc")  # hiring pages are not a channel for placements
 # Affiliate redirects to a casino ("/visit/stake/") are not the site owner's contact
 AFFILIATE_PATHS = ("/visit/", "/go/", "/out/", "/goto/", "/recommends/", "/refer/", "/click")
