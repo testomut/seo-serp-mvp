@@ -123,3 +123,6 @@ def test_logos_contacts_and_geo_blocks():
     assert "[image: Lucky Tiger]" in page["text"]
     assert page["contact_links"] == ["https://reviews.example/advertise/", "https://reviews.example/contact/"]
     assert fetch.parse("https://casino.example/", "<p>Sorry, this site is not available in your country.</p>") is None
+    assert fetch.parse("https://casino.example/", "<p>Our website is restricted to visitors in your jurisdiction.</p>") is None
+    menu = fetch.parse("https://reviews.example/", "<nav>Menu Betway</nav><main>Jackpot City review</main>")
+    assert "Betway" not in menu["text"] and "Jackpot City" in menu["text"]  # menus are not page content

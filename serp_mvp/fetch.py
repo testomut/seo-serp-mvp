@@ -22,7 +22,8 @@ NOT_CONTACT_WORDS = ("career", "jobs", "vacanc")  # hiring pages are not a chann
 AFFILIATE_PATHS = ("/visit/", "/go/", "/out/", "/goto/", "/recommends/", "/refer/", "/click")
 # Some sites answer 200 with a "not available in your country" page instead of the content
 GEO_BLOCK_PHRASES = ("not available in your country", "not available in your region", "country is restricted",
-                     "restricted in your country", "not accessible from your country", "country-blocked")
+                     "restricted in your country", "not accessible from your country", "country-blocked",
+                     "your jurisdiction", "your location is not")
 
 
 def get_page(url):
@@ -69,18 +70,29 @@ def parse(url, html):
             contact_links.append((priority, full_url))
     contact_links = list(dict.fromkeys(link for _, link in sorted(contact_links)))
 
-    # Casino lists often show brands only as logos: keep the image description in the text
-    for image in soup.find_all("img", alt=True):
-        alt = image["alt"].strip()
-        image.replace_with(f" [image: {alt}] " if 2 < len(alt) <= 60 else " ")
-
     # Emails are taken only from visible text and mailto links, not from scripts
-    # (scripts contain technical addresses like error-tracker keys).
+    # (scripts contain technical addresses like error-tracker keys). Footer emails count too.
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
-    text = " ".join(soup.get_text(" ").split())
-    emails += EMAIL_RE.findall(text)
+    emails += EMAIL_RE.findall(soup.get_text(" "))
     emails = [e for e in dict.fromkeys(emails) if not e.endswith((".png", ".jpg", ".webp", ".svg"))]
+
+    # The LLM reads only the main part: menus, header and footer would fill the text limit
+    for tag in soup(["nav", "header", "footer"]):
+        tag.decompose()
+
+    # Casino lists often show brands only as logos: keep the image description in the text,
+    # once per page and not when the same words are already written next to the image
+    seen = set()
+    for image in soup.find_all("img", alt=True):
+        alt = image["alt"].strip()
+        nearby = image.parent.get_text(" ").lower() if image.parent else ""
+        if 2 < len(alt) <= 60 and alt.lower() not in seen and alt.lower() not in nearby:
+            seen.add(alt.lower())
+            image.replace_with(f" [image: {alt}] ")
+        else:
+            image.replace_with(" ")
+    text = " ".join(soup.get_text(" ").split())
 
     # A short page that says "not available in your country" has no content to label
     if len(text) < 3000 and any(phrase in text.lower() for phrase in GEO_BLOCK_PHRASES):
