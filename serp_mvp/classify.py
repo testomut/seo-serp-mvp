@@ -20,7 +20,8 @@ Look at the web page below and answer in JSON with exactly these fields:
 - "relevant": true only for "review" sites. Casino operators, Wikipedia, forums, news and regulators are false.
 - "brands": every real-money online-casino operator mentioned on the page (empty list if none), e.g.
   "Jackpot City", "Spin Casino". Go through all rankings, tables and bonus cards; brands often appear only as
-  logos, written in the text as [image: ...]. NOT slot or game titles, game providers, payment methods,
+  logos, written in the text as [image: ...]. A brand is a casino where you open an account; if the page
+  calls a name a slot, game or jackpot, it is NOT a brand. NOT slot or game titles, game providers, payment methods,
   sportsbooks without a casino, prediction markets (e.g. Polymarket), free-to-play or social games and
   free poker apps (e.g. Cosmo Spins, Replay Poker). Each brand once.
 - "contact": an email or contact-page URL for reaching the site owner about advertising. Use ONLY the
@@ -111,10 +112,23 @@ def classify(url, page, brands):
     for name, ask in available_llms():
         try:
             text, model = with_retries(lambda: ask(prompt), attempts=3, first_pause=10)
-            return to_label(text, f"{name} ({model}), {config.LABEL_VERSION}", page)
+            label = to_label(text, f"{name} ({model}), {config.LABEL_VERSION}", page)
         except Exception as error:
             log.warning("%s failed for %s (%s), trying the next option", name, url, error)
+            continue
+        return check_operator(url, label, brands)
     return rules.classify(url, page, brands)
+
+
+def check_operator(url, label, brands):
+    """A casino's own site (including subdomains like blog.rocketplay.com) is never a placement site,
+    whatever the LLM said, and its own brand is always listed."""
+    brand = rules.operator_brand(url, label["brands"] + brands)
+    if brand is None:
+        return label
+    reason = label["reason"] if label["site_type"] == "casino" else f"Domain belongs to brand {brand}"
+    return {**label, "relevant": False, "site_type": "casino", "reason": reason,
+            "brands": list(dict.fromkeys([brand] + label["brands"]))}
 
 
 def to_label(text, method, page):
@@ -139,6 +153,8 @@ def to_label(text, method, page):
     brands = {}
     for brand in answer.get("brands", []):
         brands.setdefault(rules.brand_key(brand), brand.strip())
+    for not_brand in rules.load_brands(config.NOT_BRANDS_FILE):  # games and products, e.g. "Mega Moolah"
+        brands.pop(rules.brand_key(not_brand), None)
 
     return {
         "relevant": bool(answer.get("relevant")),

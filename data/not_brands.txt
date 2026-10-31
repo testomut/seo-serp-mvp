@@ -1,0 +1,15 @@
+# Names the LLM tends to take for casino brands, but they are games, free products or not casinos.
+# One per line; spelling variants are matched automatically (see rules.brand_key).
+Mega Moolah
+Gladiator Jackpot
+Cosmo Spins
+Replay Poker
+Polymarket
+Kalshi
+Book of Dead
+Starburst
+Gates of Olympus
+Sweet Bonanza
+Big Bass Bonanza
+Wolf Gold
+Aviator

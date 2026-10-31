@@ -65,3 +65,29 @@ def test_next_llm_is_used_when_first_fails(monkeypatch):
     ])
     label = classify.classify("https://site.example/", PAGE, [])
     assert label["method"].startswith("claude (claude-test)")
+
+
+def test_slot_games_are_not_brands():
+    answer = ANSWER.replace('"Jackpot City Casino"', '"Mega Moolah", "Gladiator Jackpot"')
+    assert classify.to_label(answer, "gemini (test)", PAGE)["brands"] == ["Jackpot City"]
+
+
+def test_operator_subdomain_is_not_a_placement_site(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    blog = ANSWER.replace('"Jackpot City", "Jackpot City Casino"', '"WinSpirit", "Rocketplay Casino"')
+    monkeypatch.setattr(classify, "LLMS", [("gemini", "GEMINI_API_KEY", lambda prompt: (blog, "test"))])
+    label = classify.classify("https://blog.rocketplay.com/", PAGE, [])
+    assert (label["relevant"], label["site_type"], label["brands"][0]) == (False, "casino", "Rocketplay Casino")
+
+
+def test_operator_keeps_its_own_brand(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    casino = '{"site_type": "casino", "relevant": false, "brands": [], "contact": "", "reason": "Operator"}'
+    monkeypatch.setattr(classify, "LLMS", [("gemini", "GEMINI_API_KEY", lambda prompt: (casino, "test"))])
+    label = classify.classify("https://www.playojo.com/ca/", PAGE, ["PlayOJO"])
+    assert label["brands"] == ["PlayOJO"]
+
+
+def test_brand_inside_a_longer_domain_word_is_not_an_operator():
+    from serp_mvp import rules
+    assert rules.operator_brand("https://casinodays-review.com/", ["Casino Days"]) is None
