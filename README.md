@@ -6,7 +6,7 @@
 Каждый день собирает топ-10 Google.ca (mobile) по 10 ключам, хранит историю позиций и размечает каждый новый URL
 с помощью LLM: подходит ли сайт для размещения, какие казино-бренды на нём, контакт владельца.
 
-**Результат:** [Google-таблица](https://docs.google.com/spreadsheets/d/1cYC54BHTFjoNOcc95wbD3JBvfgg0xfXZahCWhIuQ5sU) (обновляется каждый день, только просмотр) · [`results.xlsx`](results.xlsx) (вкладки Help, Sites, Positions). **Видео:** _ссылка_.
+**Результат:** [Google-таблица](https://docs.google.com/spreadsheets/d/1cYC54BHTFjoNOcc95wbD3JBvfgg0xfXZahCWhIuQ5sU) (обновляется каждый день, только просмотр) · [`results.xlsx`](results.xlsx) (вкладки Help, Sites, Positions). **Видео:** [демонстрация, 4 мин](https://www.loom.com/share/86c5c1098ab6481884b60d504c0aef3f).
 Подробнее: [как устроено](docs/DETAILS.md) · [проверка 20 URL](docs/QUALITY.md) · [запуск у себя](docs/SETUP.md) · [для менеджера](docs/MANAGER.md).
 
 ## Запуск (Python 3.12)
