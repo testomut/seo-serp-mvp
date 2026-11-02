@@ -1,13 +1,13 @@
 """Step 2: download a page and pull out what the classifier needs."""
 import re
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
 import config
 from serp_mvp.retry import with_retries
-from serp_mvp.rules import AD_WORDS, domain_of
+from serp_mvp.rules import AD_LINK_WORDS, domain_of
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 "
@@ -16,10 +16,11 @@ HEADERS = {
 }
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 # Contact links, best first: advertising / partnerships, then a general contact page
-CONTACT_WORDS = [AD_WORDS, ("contact", "write for us", "work with us")]
-NOT_CONTACT_WORDS = ("career", "jobs", "vacanc")  # hiring pages are not a channel for placements
+CONTACT_WORDS = [AD_LINK_WORDS, ("contact", "write for us", "work with us")]
+# Hiring pages, disclosures ("advertising-disclosure") and author pages are not a channel for placements
+NOT_CONTACT_WORDS = ("career", "jobs", "vacanc", "disclosure", "/author/", "policy", "complaint", "registry")
 # Affiliate redirects to a casino ("/visit/stake/") are not the site owner's contact
-AFFILIATE_PATHS = ("/visit/", "/go/", "/out/", "/goto/", "/recommends/", "/refer/", "/click")
+AFFILIATE_PATHS = ("/visit/", "/go/", "/out/", "/goto/", "/recommends/", "/refer/", "/click", "redirect")
 # Some sites answer 200 with a "not available in your country" page instead of the content
 GEO_BLOCK_PHRASES = ("not available in your country", "not available in your region", "country is restricted",
                      "restricted in your country", "not accessible from your country", "country-blocked",
@@ -43,8 +44,11 @@ def download(url):
 
 def contact_priority(link_text, href):
     """0 = advertising/partnerships, 1 = general contact, None = not a contact link."""
-    words = (link_text + " " + href).lower()
+    words = (link_text + " " + urlparse(href).path).lower()  # not the query: "?location=featured_partners"
     if any(word in words for word in NOT_CONTACT_WORDS):
+        return None
+    # A long slug is an article ("...-responsible-gaming-partnership-oct-15-2026"), not a contact page
+    if len(urlparse(href).path.strip("/").split("/")[-1].split("-")) > 5:
         return None
     for priority, group in enumerate(CONTACT_WORDS):
         if any(word in words for word in group):

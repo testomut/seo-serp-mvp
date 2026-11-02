@@ -70,7 +70,9 @@ def clean_brands(names):
     return list(brands.values())
 
 
-AD_WORDS = ("advertis", "partner", "affiliate", "marketing", "sales", "business", "media")
+AD_WORDS = ("advertis", "partner", "affiliate", "marketing", "sales", "business", "media")  # in an email name
+# In a link only the narrow words: "business" or "marketing" also match ".../wiki/Brick_and_mortar_business"
+AD_LINK_WORDS = ("advertis", "partner")  # not "affiliate": "/affiliate-programs" lists casino programs
 GENERIC_EMAIL_WORDS = ("info", "contact", "hello", "support", "admin", "team", "office", "mail", "editor",
                        "enquir", "press", "help", "feedback")
 
@@ -82,7 +84,7 @@ def contact_level(contact):
         if any(word in local for word in AD_WORDS):
             return 0
         return 1 if any(word in local for word in GENERIC_EMAIL_WORDS) else 2
-    return 0 if any(word in contact.lower() for word in AD_WORDS) else 1
+    return 0 if any(word in urlparse(contact).path.lower() for word in AD_LINK_WORDS) else 1
 
 
 def pick_contact(page, preferred=""):

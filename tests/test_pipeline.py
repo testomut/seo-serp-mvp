@@ -126,3 +126,13 @@ def test_logos_contacts_and_geo_blocks():
     assert fetch.parse("https://casino.example/", "<p>Our website is restricted to visitors in your jurisdiction.</p>") is None
     menu = fetch.parse("https://reviews.example/", "<nav>Menu Betway</nav><main>Jackpot City review</main>")
     assert "Betway" not in menu["text"] and "Jackpot City" in menu["text"]  # menus are not page content
+
+
+def test_words_in_query_or_article_titles_are_not_contacts():
+    html = """<a href="/wiki/Brick_and_mortar_business">Brick and mortar business</a>
+              <a href="/casino/sportsbookredirect?slug=888&location=featured_partners">Play</a>
+              <a href="/advertising-disclosure/">Advertising disclosure</a> <a href="/author/advertisement/">Ads</a> <a href="/advertising-policy/">Ads</a>
+              <a href="/news/brand-extends-responsible-gaming-partnership-oct-15-2026">News</a>
+              <a href="/contact/">Contact</a>"""
+    page = fetch.parse("https://reviews.example/", html)
+    assert page["contact_links"] == ["https://reviews.example/contact/"]
