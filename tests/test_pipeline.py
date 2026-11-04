@@ -7,9 +7,11 @@ from serp_mvp import fetch, notify, pipeline, serp, sheets, storage
 RESULTS = [{"position": n, "url": f"https://site{n}.example/", "title": ""} for n in range(1, 11)]
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def isolated(monkeypatch, tmp_path):
-    """Temporary database and Excel files, no Sheet, no pages, no messages (keys and pauses: see conftest.py)."""
+    """Temporary database and Excel files, no Sheet, no pages, no messages (keys and pauses: see conftest.py).
+    Not autouse: request it in EVERY test that calls pipeline.run(), otherwise the run writes to the real
+    data/serp.db and results.xlsx. Returns the list of messages that would have been sent."""
     for name in ("DB_FILE", "DEMO_DB_FILE", "EXCEL_FILE", "DEMO_EXCEL_FILE"):
         monkeypatch.setattr(config, name, str(tmp_path / name))
     monkeypatch.setattr(sheets, "enabled", lambda: False)
@@ -36,7 +38,7 @@ def test_demo_does_not_touch_real_data(monkeypatch, isolated):
     assert len(isolated) == 1                   # demo sends no notification
 
 
-def test_no_search_key_stops_without_demo():
+def test_no_search_key_stops_without_demo(isolated):
     with pytest.raises(SystemExit):
         pipeline.run()
 
