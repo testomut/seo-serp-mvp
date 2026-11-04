@@ -1,19 +1,12 @@
-"""LLM calls are replaced with fakes: no keys and no network needed."""
+"""LLM calls are replaced with fakes: no keys and no network needed (keys and pauses: see conftest.py)."""
 import pytest
 import requests
 
-from serp_mvp import classify, retry
+from serp_mvp import classify
 
 PAGE = {"title": "Best casinos", "text": "Jackpot City review", "emails": ["a@b.com"], "contact_links": []}
 ANSWER = ('{"site_type": "review", "relevant": true, "brands": ["Jackpot City", "Jackpot City Casino"], '
           '"contact": "a@b.com", "reason": "Ranking of casinos"}')
-
-
-@pytest.fixture(autouse=True)
-def no_keys_no_pauses(monkeypatch):
-    for _, key, _ in classify.LLMS:
-        monkeypatch.delenv(key, raising=False)
-    monkeypatch.setattr(retry.time, "sleep", lambda seconds: None)
 
 
 def test_without_keys_rules_decide():

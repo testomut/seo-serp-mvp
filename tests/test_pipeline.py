@@ -2,22 +2,19 @@
 import pytest
 
 import config
-from serp_mvp import fetch, notify, pipeline, retry, serp, sheets, storage
+from serp_mvp import fetch, notify, pipeline, serp, sheets, storage
 
 RESULTS = [{"position": n, "url": f"https://site{n}.example/", "title": ""} for n in range(1, 11)]
 
 
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch, tmp_path):
-    """Temporary database and Excel files, no Sheet, no LLM, no pages, no pauses, no messages."""
+    """Temporary database and Excel files, no Sheet, no pages, no messages (keys and pauses: see conftest.py)."""
     for name in ("DB_FILE", "DEMO_DB_FILE", "EXCEL_FILE", "DEMO_EXCEL_FILE"):
         monkeypatch.setattr(config, name, str(tmp_path / name))
-    for key in ("SEARCHAPI_KEY", "SERPAPI_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
-        monkeypatch.delenv(key, raising=False)
     monkeypatch.setattr(sheets, "enabled", lambda: False)
     monkeypatch.setattr(pipeline, "load_keywords", lambda: ["kw1", "kw2"])
     monkeypatch.setattr(fetch, "get_page", lambda url: None)
-    monkeypatch.setattr(retry.time, "sleep", lambda seconds: None)
     sent = []
     monkeypatch.setattr(notify, "send", sent.append)
     return sent
@@ -88,7 +85,6 @@ def test_broken_api_answer_is_an_error(monkeypatch):
 def test_second_search_service_is_used_when_first_fails(monkeypatch):
     monkeypatch.setenv("SEARCHAPI_KEY", "x")
     monkeypatch.setenv("SERPAPI_KEY", "y")
-    monkeypatch.setattr(retry.time, "sleep", lambda seconds: None)
 
     def fake_search_api(url, api_key, page_params, keyword):
         if "searchapi" in url:
